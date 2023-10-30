@@ -1,0 +1,106 @@
+---
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: create-app-deployment-template
+  title: App deployment
+  description: Create a new app deployment in GitOps repo
+  tags:
+    - react
+    - cra
+spec:
+  owner: web@example.com
+  type: library
+  parameters:
+    - title: Provide some simple information
+      required:
+        - name
+        - namespace
+      properties:
+        name:
+          title: Name
+          type: string
+          description: Unique name of the app deployment
+          ui:field: EntityNamePicker
+        namespace:
+          title: Namespace
+          type: string
+          description: Namespace where to deploy app
+          ui:field: EntityNamePicker
+        image_tag:
+          title: Namespace
+          type: string
+          description: Image tag which should be in the deployment
+          ui:field: EntityNamePicker
+        request_cpu:
+          title: Requesting CPU
+          type: string
+          description: Requesting CPU resources (e.g. "250m")
+          ui:field: EntityNamePicker
+        request_memory:
+          title: Requesting memory
+          type: string
+          description: Requesting memory resources (e.g. "64Mi")
+          ui:field: EntityNamePicker
+        limit_cpu:
+          title: Limit CPU
+          type: string
+          description: Limit CPU resources (e.g. "500m")
+          ui:field: EntityNamePicker
+        limit_memory:
+          title: Limit memory
+          type: string
+          description: Limit memory resources (e.g. "128Mi")
+          ui:field: EntityNamePicker
+    - title: Choose a location
+      required:
+        - repoUrl
+      properties:
+        repoUrl:
+          title: Repository Location
+          type: string
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+            allowedOwners:
+              - floriandorau
+            allowedRepos:
+              - backstage-app-deployments
+  steps:
+    - id: template
+      name: Fetch Skeleton + Template
+      action: fetch:template
+      input:
+        url: ./skeleton
+        values:
+          name: ${{ parameters.name }}
+          namespace: ${{ parameters.namespace }}
+          image_tag: ${{ parameters.image_tag }}
+          request_cpu: ${{ parameters.request_cpu }}
+          request_memory: ${{ parameters.request_memory }}
+          limit_cpu: ${{ parameters.limit_cpu }}
+          limit_memory: ${{ parameters.limit_memory }}
+          destination: ${{ parameters.repoUrl | parseRepoUrl }}          
+
+    - id: publish
+      name: Publish PR
+      action: publish:github:pull-request
+      input:
+        allowedHosts:
+          - github.com
+        title: "New deployment: ${{ parameters.name }}"
+        description: |
+          This is to deploy new app: `${{ parameters.name }}`. Scaffoled by Backstage.
+        branchName: deployment-${{ parameters.name }}
+        targetBranchName: main
+        commitMessage: Add deployment ${{ parameters.name }}
+        repoUrl: ${{ parameters.repoUrl }}
+
+  output:
+    links:
+      - title: Repository
+        url: ${{ steps.publish.output.remoteUrl }}
+      - title: Open in catalog
+        icon: catalog
+        entityRef: ${{ steps.register.output.entityRef }}
